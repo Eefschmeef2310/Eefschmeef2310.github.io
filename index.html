@@ -128,7 +128,7 @@
       // scene.add(plane);
 
       var runnerTexture = textureLoader.load( './models/rickroll2.png' );
-      var annie = new TextureAnimator( runnerTexture, 54,1, 55, 24 ); // texture, #horiz, #vert, #total, duration.
+      var annie = new TextureAnimator( runnerTexture, 54,1, 54, 24 ); // texture, #horiz, #vert, #total, duration.
       var runnerMaterial = new THREE.MeshBasicMaterial( { map: runnerTexture, side:THREE.DoubleSide } );
       var runnerGeometry = new THREE.PlaneGeometry(10, 10, 1, 1);
       var runner = new THREE.Mesh(runnerGeometry, runnerMaterial);
