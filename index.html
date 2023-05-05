@@ -127,13 +127,13 @@
 
       // scene.add(plane);
 
-      var runnerTexture = textureLoader.load( './models/rickroll.jpg' );
-      var annie = new TextureAnimator( runnerTexture, 5, 11, 54, 100 ); // texture, #horiz, #vert, #total, duration.
+      var runnerTexture = textureLoader.load( './models/rickroll2.png' );
+      var annie = new TextureAnimator( runnerTexture, 54,1, 55, 24 ); // texture, #horiz, #vert, #total, duration.
       var runnerMaterial = new THREE.MeshBasicMaterial( { map: runnerTexture, side:THREE.DoubleSide } );
-      var runnerGeometry = new THREE.PlaneGeometry(50, 50, 1, 1);
+      var runnerGeometry = new THREE.PlaneGeometry(10, 10, 1, 1);
       var runner = new THREE.Mesh(runnerGeometry, runnerMaterial);
       runner.position.set(0,0,0);
-      scene.add(runner);
+      //scene.add(runner);
       
       
       function TextureAnimator(texture, tilesHoriz, tilesVert, numTiles, tileDispDuration) 
@@ -171,7 +171,7 @@
             texture.offset.x = currentColumn / this.tilesHorizontal;
             var currentRow = Math.floor( this.currentTile / this.tilesHorizontal );
             texture.offset.y = currentRow / this.tilesVertical;
-            console.log(currentRow);
+            //console.log(currentRow);
           }
         };
       }
