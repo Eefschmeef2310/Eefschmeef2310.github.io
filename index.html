@@ -70,6 +70,7 @@
 	import { OrbitControls } from './build/controls/OrbitControls.js';
   import { FBXLoader } from './build/loaders/FBXLoader.js';
   import { GUI } from './build/gui/lil-gui.module.min.js';
+  import {Screen} from './build/classes/Screen.js';
 
       var scene = new THREE.Scene( );
       scene.background = new THREE.Color(135/255,206/255,235/255);
@@ -127,69 +128,23 @@
 
       // scene.add(plane);
 
-      var runnerTexture = textureLoader.load( './models/rickroll2.png' );
-      var annie = new TextureAnimator( runnerTexture, 54,1, 54, 24 ); // texture, #horiz, #vert, #total, duration.
-      var runnerMaterial = new THREE.MeshBasicMaterial( { map: runnerTexture, side:THREE.DoubleSide } );
-      var runnerGeometry = new THREE.PlaneGeometry(10, 10, 1, 1);
-      var runner = new THREE.Mesh(runnerGeometry, runnerMaterial);
-      runner.position.set(0,0,0);
-      //scene.add(runner);
-      
-      
-      function TextureAnimator(texture, tilesHoriz, tilesVert, numTiles, tileDispDuration) 
-      {	
-        // note: texture passed by reference, will be updated by the update function.
-          
-        this.tilesHorizontal = tilesHoriz;
-        this.tilesVertical = tilesVert;
-        // how many images does this spritesheet contain?
-        //  usually equals tilesHoriz * tilesVert, but not necessarily,
-        //  if there at blank tiles at the bottom of the spritesheet. 
-        this.numberOfTiles = numTiles;
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping; 
-        texture.repeat.set( 1 / this.tilesHorizontal, 1 / this.tilesVertical );
-
-        // how long should each image be displayed?
-        this.tileDisplayDuration = tileDispDuration;
-
-        // how long has the current image been displayed?
-        this.currentDisplayTime = 0;
-
-        // which image is currently being displayed?
-        this.currentTile = 0;
-          
-        this.update = function( milliSec )
-        {
-          this.currentDisplayTime += milliSec;
-          while (this.currentDisplayTime > this.tileDisplayDuration)
-          {
-            this.currentDisplayTime -= this.tileDisplayDuration;
-            this.currentTile++;
-            if (this.currentTile == this.numberOfTiles)
-              this.currentTile = 0;
-            var currentColumn = this.currentTile % this.tilesHorizontal;
-            texture.offset.x = currentColumn / this.tilesHorizontal;
-            var currentRow = Math.floor( this.currentTile / this.tilesHorizontal );
-            texture.offset.y = currentRow / this.tilesVertical;
-            //console.log(currentRow);
-          }
-        };
-      }
+      //var runnerTexture = textureLoader.load( './models/rickroll2.png' );
+      //var screenImage = new Screen('./models/rickroll2.png', 54, 24);
+      //var images = ["Standby.png", "Heightmap.png"];
+      var imageIndex = 0;
+      var images = [new Screen('./models/rickroll2.png', 54, 24), new Screen('./models/Baby.png', 57, 48), new Screen('./models/Lorax.png', 180, 48), new Screen('./models/Shrek.png', 29, 1)]
 
       var clock = new THREE.Clock();
       function animatePlane()
       {
         requestAnimationFrame(animatePlane);
         var delta = clock.getDelta();
-        annie.update(1000*delta);
+        images[imageIndex].animator.update(1000*delta);
         renderer.render(scene,camera);
       }
       animatePlane();
 
-
-
-      var images = ["Standby.png", "Heightmap.png"];
-      var imageIndex = 0;
+      var screenTest = new Screen('./models/rickroll2.png', 54, 24);
 
       var screen;
       var screenOn = false;
@@ -227,7 +182,7 @@
       {
         if(screenOn)
         {
-          screen.material = runnerMaterial;
+          screen.material = images[imageIndex].material;
         }
         else
         {
@@ -242,7 +197,7 @@
         {
           imageIndex = 0;
         }
-        screenOnMaterial.map = textureLoader.load("./models/" + images[imageIndex]);
+        screen.material = images[imageIndex].material;
       }
 
 
