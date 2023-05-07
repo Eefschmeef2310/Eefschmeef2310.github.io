@@ -197,7 +197,10 @@
         {
           imageIndex = 0;
         }
-        screen.material = images[imageIndex].material;
+        if(screenOn)
+        {
+          screen.material = images[imageIndex].material;
+        }
       }
 
 
