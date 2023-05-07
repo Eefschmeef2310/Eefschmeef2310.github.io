@@ -55,7 +55,7 @@
     <!--Fragment Shader Scripts-->
     <script id="filmGrain" type="x-shader/x-fragment">
       uniform float amount;
-      uniform sampler2D testTexture;
+      uniform sampler2D uTexture;
       uniform sampler2D tDiffuse;
       varying vec2 vUv;
     
@@ -75,7 +75,8 @@
         uvRandom.y *= random(vec2(uvRandom.y,amount));
         color.rgb += random(uvRandom)*0.15;
         //gl_FragColor = vec4( color  );
-        gl_FragColor = texture2D(testTexture, vUv);
+        vec4 imageColor = texture2D(uTexture, vUv);
+        gl_FragColor = imageColor;
       }
     </script>
 		
@@ -207,12 +208,11 @@
 
       var vertShader = document.getElementById('vertexShader').textContent;
       var fragShader = document.getElementById('filmGrain').textContent;
-      var textureTest = textureLoader.load("./models/Heightmap.png");
       //------FragmentShaders-----
       var counter;
       var filmGrain = {
         uniforms: {
-          "testTexture": {value: textureTest},
+          uTexture: { value: screenOnMaterial.map },
           "tDiffuse": {value : null},
           "amount" : {value: counter}
         },
@@ -221,6 +221,7 @@
       }
 
       var testMat = new THREE.ShaderMaterial();
+      testMat.uniforms = filmGrain.uniforms;
       testMat.vertexShader = vertShader;
       testMat.fragmentShader = fragShader;
       //console.log(filmGrain.uniforms.texture.value);
@@ -261,7 +262,7 @@
       {
         renderer.render(scene,camera);
         counter+=0.01;
-        //customMaterial.uniforms.time.value = clock.getElapsedTime();
+        filmGrain.uniforms.uTexture.value = screen.material.map;
         requestAnimationFrame(MyUpdateLoop);
       };
 
