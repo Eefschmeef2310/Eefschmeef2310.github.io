@@ -39,7 +39,10 @@
 				}
 			}
 		</script>
-    <!-- <script type="x-shader/x-vertex" id="vertexShader">
+
+
+    <!--Vertex Shader Scripts-->
+    <script type="x-shader/x-vertex" id="vertexShader">
       varying vec2 vUv;
       void main()
       {
@@ -47,22 +50,32 @@
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     </script>
-    <script type="x-shader/x-fragment" id="fragmentShader">
-      uniform sampler2D gifTexture;
-      uniform float time;
-      uniform float frameCount;
-      uniform float frameDuration;
-      varying vec2 vUv;
 
-      void main() {
-        float frameProgress = mod(time, frameCount * frameDuration) / frameDuration;
-        float frameIndex = floor(mod(time, frameCount * frameDuration) / frameDuration);
-        vec2 uv = vec2(vUv.x, vUv.y + (1.0 - frameProgress));
-        uv.y += frameIndex / frameCount;
-        vec4 color = texture2D(gifTexture, vUv);
-        gl_FragColor = color;
+
+    <!--Fragment Shader Scripts-->
+    <script id="filmGrain" type="x-shader/x-fragment">
+      uniform float amount;
+      uniform sampler2D tDiffuse;
+      varying vec2 vUv;
+    
+      float random( vec2 p )
+      {
+        vec2 K1 = vec2(
+          23.14069263277926, // e^pi (Gelfond's constant)
+          2.665144142690225 // 2^sqrt(2) (Gelfondâ€“Schneider constant)
+        );
+        return fract( cos( dot(p,K1) ) * 12345.6789 );
       }
-    </script> -->
+    
+      void main() {
+    
+        vec4 color = texture2D( tDiffuse, vUv );
+        vec2 uvRandom = vUv;
+        uvRandom.y *= random(vec2(uvRandom.y,amount));
+        color.rgb += random(uvRandom)*0.15;
+        gl_FragColor = vec4( color  );
+      }
+    </script>
 		
 	<script type="module">
 
@@ -71,6 +84,7 @@
   import { FBXLoader } from './build/loaders/FBXLoader.js';
   import { GUI } from './build/gui/lil-gui.module.min.js';
   import {Screen} from './build/classes/Screen.js';
+
 
       var scene = new THREE.Scene( );
       scene.background = new THREE.Color(135/255,206/255,235/255);
@@ -106,31 +120,6 @@
       var modelLoader = new FBXLoader();
       var textureLoader = new THREE.TextureLoader();
 
-      // var testGif = textureLoader.load("./models/rickroll-roll.gif");
-      // testGif.minFilter = THREE.NearestFilter;
-      // testGif.maagFilter = THREE.NearestFilter;
-      // testGif.wrapS = THREE.RepeatWrapping;
-
-      // const customMaterial = new THREE.ShaderMaterial({
-      //   uniforms: {
-      //     time: { value: 0.0 },
-      //     gifTexture: { value: testGif},
-      //     frameCount: {value: 54},
-      //     frameDuration: {value: 1.0/24.0},
-      //   },
-      //   vertexShader: document.getElementById('vertexShader').textContent,
-      //   fragmentShader: document.getElementById('fragmentShader').textContent,
-      // });
-
-      // var testPlane = new THREE.PlaneGeometry(10,10,10, 10);
-      // var plane = new THREE.Mesh(testPlane, customMaterial);
-      // Load the GIF file and create a sprite sheet
-
-      // scene.add(plane);
-
-      //var runnerTexture = textureLoader.load( './models/rickroll2.png' );
-      //var screenImage = new Screen('./models/rickroll2.png', 54, 24);
-      //var images = ["Standby.png", "Heightmap.png"];
       var imageIndex = 0;
       var images = [new Screen('./models/rickroll2.png', 54, 24), new Screen('./models/Baby.png', 57, 48), new Screen('./models/Lorax.png', 180, 48), new Screen('./models/Shrek.png', 29, 1)]
 
@@ -154,6 +143,7 @@
       var knob;
 
       var TV;
+      var plane;
       modelLoader.load("./models/TV/TV.fbx", function(object)
       {
         TV = object;
@@ -176,7 +166,15 @@
             knob = child;
           }
         });
+        var planeGeom = new THREE.PlaneGeometry(1.5,1.1,1,1);
+        plane = new THREE.Mesh(planeGeom, screen.material);
+        plane.position.set(-0.15,1.5,0);
+        scene.add(plane); 
+
+        filmGrain.uniforms.tDiffuse.value = screen.material.map;
       });
+
+           
 
       function toggleScreen()
       {
@@ -188,6 +186,7 @@
         {
           screen.material = screenOffMaterial;
         }
+        plane.material = screen.material;
       }
 
       function changeScreen()
@@ -201,6 +200,20 @@
         {
           screen.material = images[imageIndex].material;
         }
+        plane.material = screen.material;
+      }
+
+      var vertShader = document.getElementById('vertexShader').textContent;
+      var fragShader = document.getElementById('filmGrain').textContent;
+      //------FragmentShaders-----
+      var counter;
+      var filmGrain = {
+        uniforms: {
+          "tDiffuse": {value : null},
+          "amount" : {value: counter}
+        },
+        vertexShader: vertShader,
+        fragmentShader: filmGrain
       }
 
 
@@ -234,6 +247,7 @@
       var MyUpdateLoop = function ( )
       {
         renderer.render(scene,camera);
+        counter+=0.01;
         //customMaterial.uniforms.time.value = clock.getElapsedTime();
         requestAnimationFrame(MyUpdateLoop);
       };
