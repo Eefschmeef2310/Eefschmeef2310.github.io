@@ -59,23 +59,17 @@
 
       var ratio = window.innerWidth/window.innerHeight;
       var camera = new THREE.PerspectiveCamera(45,ratio,0.1,1000);
-      camera.position.set(0,0,10);
+      camera.position.set(0,0,4);
   	  camera.lookAt(0,0,0);
       
       var controls = new OrbitControls( camera, renderer.domElement );
 
-      var cameralight = new THREE.PointLight( new THREE.Color(1,1,1), 0.5 );
+      var cameralight = new THREE.PointLight( new THREE.Color(1,1,1), 0.8 );
       camera.add( cameralight );
       scene.add(camera);
 
       var ambientlight = new THREE.AmbientLight(new THREE.Color(1,1,1), 0.5);
       scene.add(ambientlight);
-      
-      var dirLight = new THREE.SpotLight(new THREE.Color(1,1,1), 0.5);
-      dirLight.castShadow = true;
-      dirLight.position.x = 10;
-      dirLight.position.y = 10;
-      scene.add(dirLight);
 
 
       //Add TV to scene
@@ -83,26 +77,19 @@
       var textureLoader = new THREE.TextureLoader();
 
       var imageIndex = 0;
-      var images = [new Screen('./models/rickroll2.png', 54, 24), new Screen('./models/Baby.png', 57, 48), new Screen('./models/Lorax.png', 180, 48), new Screen('./models/Shrek.png', 29, 1)]
-
-      var clock = new THREE.Clock();
-      function animatePlane()
-      {
-        requestAnimationFrame(animatePlane);
-        var delta = clock.getDelta();
-        //images[imageIndex].animator.update(1000*delta);
-        renderer.render(scene,camera);
-      }
-      animatePlane();
-
-      var screenTest = new Screen('./models/rickroll2.png', 54, 24);
+      var images = [new Screen('./models/rickroll2.png', 54, 40),
+                    new Screen('./models/Standby.png', 1, 1),
+                    new Screen('./models/Tron.png', 80, 24),
+                    new Screen('./models/Money For Nothing.png', 36, 10),
+                    new Screen('./models/rickroll2.png', 54, 40),
+                    new Screen('./models/ToyStory.png', 90, 20),
+                    new Screen('./models/Mario64.png', 60, 10),
+                    new Screen('./models/Shrek.png', 85, 15),
+                    new Screen('./models/Gollum.png', 28, 10)]
 
       var screen;
       var screenOn = false;
       var screenOffMaterial;
-      var screenOnMaterial = new THREE.MeshStandardMaterial();
-
-      var knob;
 
       var TV;
       var plane;
@@ -110,7 +97,6 @@
       {
         TV = object;
         scene.add(TV);
-        //console.log(TV);
         TV.traverse(function(child)
         {
           if(child.isMesh)
@@ -121,34 +107,155 @@
           {
             screen = child;
             screenOffMaterial = child.material;
-            screenOnMaterial.map = textureLoader.load("./models/Standby.png");
-          }
-          if(child.name == "Knob")
-          {
-            knob = child;
           }
         });
-        var planeGeom = new THREE.PlaneGeometry(1.5,1.1,1,1);
-        plane = new THREE.Mesh(planeGeom, screen.material);
-        plane.position.set(-0.15,1.5,0);
-        scene.add(plane); 
-
-        //filmGrain.uniforms.tDiffuse.value = textureLoader.load("./models/Heightmap.png");
       });
 
-           
+      //------FragmentShaders-----
+      const defaultFragmentShader = `
+        uniform sampler2D spriteSheetTexture;
+        uniform float numCols;
+        uniform float currentFrame;
+        varying vec2 vUv;
 
+        void main() {
+          vec2 spriteSize = vec2(1.0 / numCols, 1.0);
+          vec2 spriteOffset = vec2(
+            mod(currentFrame, numCols) / numCols,
+            floor(currentFrame / numCols)
+          );
+          vec2 uv = vUv * spriteSize + spriteOffset;
+          gl_FragColor = texture2D(spriteSheetTexture, uv);
+        }
+      `;
+
+      const chromaticShader = `
+        uniform sampler2D spriteSheetTexture;
+        uniform float numCols;
+        uniform float currentFrame;
+        varying vec2 vUv;
+        float amount = 0.00005;
+
+        void main() {
+          vec2 spriteSize = vec2(1.0 / numCols, 1.0);
+          vec2 spriteOffset = vec2(
+            mod(currentFrame, numCols) / numCols,
+            floor(currentFrame / numCols)
+          );
+          vec2 uv = vUv * spriteSize + spriteOffset;
+
+          vec4 red = texture2D(spriteSheetTexture, uv + vec2(amount, 0.0));
+          vec4 blue = texture2D(spriteSheetTexture, uv);
+          vec4 green = texture2D(spriteSheetTexture, uv - vec2(amount, 0.0));
+          gl_FragColor = vec4(red.r, green.g, blue.b, 1.0);
+        }
+      `;
+
+      const invertFragment = `
+        uniform sampler2D spriteSheetTexture;
+        uniform float numCols;
+        uniform float currentFrame;
+
+        varying vec2 vUv;
+
+        void main() {
+          vec2 spriteSize = vec2(1.0 / numCols, 1.0);
+          vec2 spriteOffset = vec2(
+            mod(currentFrame, numCols) / numCols,
+            floor(currentFrame / numCols)
+          );
+          vec2 uv = vUv * spriteSize + spriteOffset;
+          vec4 color = texture2D(spriteSheetTexture, uv);
+          color.rgb = 1.0 - color.rgb;
+          gl_FragColor = vec4(color);
+        }
+      `;
+
+      const grayscaleFragment = `
+        uniform sampler2D spriteSheetTexture;
+        uniform float numCols;
+        uniform float currentFrame;
+
+        varying vec2 vUv;
+
+        void main() {
+          vec2 spriteSize = vec2(1.0 / numCols, 1.0);
+          vec2 spriteOffset = vec2(
+            mod(currentFrame, numCols) / numCols,
+            floor(currentFrame / numCols)
+          );
+          vec2 uv = vUv * spriteSize + spriteOffset;
+          vec4 color = texture2D(spriteSheetTexture, uv);
+          float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+          gl_FragColor = vec4(vec3(gray), color.a);
+        }
+      `;
+
+      const filmGrain = `
+        uniform float counter;
+        uniform sampler2D spriteSheetTexture;
+        uniform float numCols;
+        uniform float currentFrame;
+        varying vec2 vUv;
+      
+        float random( vec2 p )
+        {
+          vec2 K1 = vec2(
+            23.14069263277926, // e^pi (Gelfond's constant)
+            2.665144142690225 // 2^sqrt(2) (Gelfondâ€“Schneider constant)
+          );
+          return fract( cos( dot(p,K1) ) * 12345.6789 );
+        }
+      
+        void main() {
+          vec2 spriteSize = vec2(1.0 / numCols, 1.0);
+          vec2 spriteOffset = vec2(
+            mod(currentFrame, numCols) / numCols,
+            floor(currentFrame / numCols)
+          );
+          vec2 uv = vUv * spriteSize + spriteOffset;
+
+          vec4 color = texture2D( spriteSheetTexture, uv );
+          vec2 uvRandom = vUv;
+          uvRandom.y *= random(vec2(uvRandom.y,counter));
+          color.rgb += random(uvRandom)*0.15;
+          gl_FragColor = vec4( color );
+        }`;
+
+      var fragmentIndex = 0;
+      var fragmentEffects = [defaultFragmentShader, chromaticShader, filmGrain, invertFragment, grayscaleFragment];
+
+      var counter = 0.0;
+      var defaultFragment = new THREE.ShaderMaterial({
+        uniforms: {
+          spriteSheetTexture: { value: images[imageIndex].texture },
+          numCols: { value: images[imageIndex].frameCount },
+          currentFrame: { value: 0 },
+          counter : {value: counter},
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main()
+          {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }`,
+        fragmentShader: fragmentEffects[fragmentIndex],
+      });
+
+      
+      
+           
       function toggleScreen()
       {
         if(screenOn)
         {
-          screen.material = images[imageIndex].material;
+          screen.material = defaultFragment;
         }
         else
         {
           screen.material = screenOffMaterial;
         }
-        plane.material = screen.material;
       }
 
       function changeScreen()
@@ -158,59 +265,21 @@
         {
           imageIndex = 0;
         }
-        if(screenOn)
-        {
-          screen.material = images[imageIndex].material;
-        }
-        plane.material = screen.material;
+        defaultFragment.uniforms.spriteSheetTexture.value = images[imageIndex].texture;
+        defaultFragment.uniforms.numCols.value = images[imageIndex].frameCount;
+        defaultFragment.uniforms.currentFrame.value = 0;
       }
 
-      //------FragmentShaders-----
-      const defaultFragment = new THREE.ShaderMaterial({
-        uniforms: {
-          spriteSheetTexture: { value: images[imageIndex].material },
-          numRows: { value: images[imageIndex].frameCount },
-          numCols: { value: 1 },
-          currentFrame: { value: currentFrame },
-        },
-        vertexShader: `
-          varying vec2 vUv;
-          void main()
-          {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }`,
-        fragmentShader: `
-          uniform sampler2D spriteSheetTexture;
-          uniform float numRows;
-          uniform float numCols;
-          uniform float currentFrame;
-
-          varying vec2 vUv;
-
-          void main() {
-            vec2 spriteSize = vec2(1.0 / numCols, 1.0 / numRows);
-            vec2 spriteOffset = vec2(
-              mod(currentFrame, numCols) / numCols,
-              floor(currentFrame / numCols) / numRows
-            );
-            vec2 uv = vUv * spriteSize + spriteOffset;
-            gl_FragColor = texture2D(spriteSheetTexture, uv);
-          }
-        `,
-      });
-
-      var testMat = new THREE.ShaderMaterial();
-      testMat.uniforms = filmGrain.uniforms;
-      testMat.vertexShader = vertShader;
-      testMat.fragmentShader = fragShader;
-      //console.log(filmGrain.uniforms.texture.value);
-      //filmGrain.uniforms.tDiffuse.value = textureLoader.load("./models/Heightmap.png");
-      //console.log(filmGrain.uniforms.tDiffuse.value);
-      var testCube = new THREE.Mesh(new THREE.BoxGeometry(3,3,3), testMat);
-      testCube.position.set(-1,0,0);
-      scene.add(testCube);
-
+      function changeEffect()
+      {
+        fragmentIndex++;
+        if(fragmentIndex >= fragmentEffects.length)
+        {
+          fragmentIndex = 0;
+        }
+        defaultFragment.fragmentShader = fragmentEffects[fragmentIndex];
+        defaultFragment.needsUpdate = true;
+      }
 
       var raycaster = new THREE.Raycaster();
       function onDocumentMouseDown( event ) {
@@ -233,26 +302,33 @@
             case "Knob":
               changeScreen()
               break;
+            case "FragmentKnob":
+              changeEffect();
+              break;
           }
         }
       }
-      
-      //const clock = new THREE.Clock();
 
-      var MyUpdateLoop = function ( )
-      {
-        renderer.render(scene,camera);
-        //counter+=0.01;
+      // Update the current frame of the animation and set the material's uniform variable
+      // Define the duration of each frame in seconds
+      var frameDuration = 0.1;
+      var clock = new THREE.Clock();
+      function animateSpriteSheet() {
+        const frameTime = 1/images[imageIndex].playSpeed;
+        frameDuration -= clock.getDelta();
 
-        // filmGrain.uniforms.uTexture.value = images[imageIndex].animator.texture;
-        // filmGrain.uniforms.uTexture.value.wrapS = filmGrain.uniforms.uTexture.value.wrapT = THREE.RepeatWrapping; 
-        // filmGrain.uniforms.uTexture.value.offset.x = images[imageIndex].animator.texture.offset.x;
-        //filmGrain.uniforms.uTexture.value.repeat.set( 1 / images[imageIndex].tilesHorizontal, 1 / images[imageIndex].tilesVertical );
+        while(frameDuration <= 0)
+        {
+          defaultFragment.uniforms.currentFrame.value = (defaultFragment.uniforms.currentFrame.value + 1) % (defaultFragment.uniforms.numCols.value);
+          frameDuration+= frameTime;
+        }
 
-        requestAnimationFrame(MyUpdateLoop);
-      };
-
-      requestAnimationFrame(MyUpdateLoop);
+        defaultFragment.uniforms.counter.value += 0.01;
+        
+        renderer.render(scene, camera);
+        requestAnimationFrame(animateSpriteSheet);
+      }
+      animateSpriteSheet();
 
       //this function is called when the window is resized
       var MyResize = function ( )
