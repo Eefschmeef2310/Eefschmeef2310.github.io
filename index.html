@@ -228,6 +228,7 @@
       //filmGrain.uniforms.tDiffuse.value = textureLoader.load("./models/Heightmap.png");
       //console.log(filmGrain.uniforms.tDiffuse.value);
       var testCube = new THREE.Mesh(new THREE.BoxGeometry(3,3,3), testMat);
+      testCube.position.set(-1,0,0);
       scene.add(testCube);
 
 
@@ -261,8 +262,13 @@
       var MyUpdateLoop = function ( )
       {
         renderer.render(scene,camera);
-        counter+=0.01;
-        filmGrain.uniforms.uTexture.value = screen.material.map;
+        //counter+=0.01;
+
+        // filmGrain.uniforms.uTexture.value = images[imageIndex].animator.texture;
+        // filmGrain.uniforms.uTexture.value.wrapS = filmGrain.uniforms.uTexture.value.wrapT = THREE.RepeatWrapping; 
+        // filmGrain.uniforms.uTexture.value.offset.x = images[imageIndex].animator.texture.offset.x;
+        //filmGrain.uniforms.uTexture.value.repeat.set( 1 / images[imageIndex].tilesHorizontal, 1 / images[imageIndex].tilesVertical );
+
         requestAnimationFrame(MyUpdateLoop);
       };
 
