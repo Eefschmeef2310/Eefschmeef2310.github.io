@@ -52,8 +52,8 @@ class Screen
         this.texture = new THREE.TextureLoader().load(texture);
         this.frameCount = frameCount;
         this.playSpeed = playSpeed;
-        this.material = new THREE.MeshBasicMaterial( { map: this.texture, side:THREE.DoubleSide } );
-        this.animator = new TextureAnimator(this.texture, this.frameCount, 1, this.frameCount, this.playSpeed);
+        //this.material = new THREE.MeshBasicMaterial( { map: this.texture, side:THREE.DoubleSide } );
+        //this.animator = new TextureAnimator(this.texture, this.frameCount, 1, this.frameCount, this.playSpeed);
         //console.log(this.animator);
     }
     

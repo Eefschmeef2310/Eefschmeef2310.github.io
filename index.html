@@ -38,48 +38,7 @@
 					"three": "./build/three.module.js"
 				}
 			}
-		</script>
-
-
-    <!--Vertex Shader Scripts-->
-    <script type="x-shader/x-vertex" id="vertexShader">
-      varying vec2 vUv;
-      void main()
-      {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    </script>
-
-
-    <!--Fragment Shader Scripts-->
-    <script id="filmGrain" type="x-shader/x-fragment">
-      uniform float amount;
-      uniform sampler2D uTexture;
-      uniform sampler2D tDiffuse;
-      varying vec2 vUv;
-    
-      float random( vec2 p )
-      {
-        vec2 K1 = vec2(
-          23.14069263277926, // e^pi (Gelfond's constant)
-          2.665144142690225 // 2^sqrt(2) (Gelfondâ€“Schneider constant)
-        );
-        return fract( cos( dot(p,K1) ) * 12345.6789 );
-      }
-    
-      void main() {
-    
-        vec4 color = texture2D( tDiffuse, vUv );
-        vec2 uvRandom = vUv;
-        uvRandom.y *= random(vec2(uvRandom.y,amount));
-        color.rgb += random(uvRandom)*0.15;
-        //gl_FragColor = vec4( color  );
-        vec4 imageColor = texture2D(uTexture, vUv);
-        gl_FragColor = imageColor;
-      }
-    </script>
-		
+		</script>		
 	<script type="module">
 
 	import * as THREE from 'three';
@@ -131,7 +90,7 @@
       {
         requestAnimationFrame(animatePlane);
         var delta = clock.getDelta();
-        images[imageIndex].animator.update(1000*delta);
+        //images[imageIndex].animator.update(1000*delta);
         renderer.render(scene,camera);
       }
       animatePlane();
@@ -206,19 +165,40 @@
         plane.material = screen.material;
       }
 
-      var vertShader = document.getElementById('vertexShader').textContent;
-      var fragShader = document.getElementById('filmGrain').textContent;
       //------FragmentShaders-----
-      var counter;
-      var filmGrain = {
+      const defaultFragment = new THREE.ShaderMaterial({
         uniforms: {
-          uTexture: { value: screenOnMaterial.map },
-          "tDiffuse": {value : null},
-          "amount" : {value: counter}
+          spriteSheetTexture: { value: images[imageIndex].material },
+          numRows: { value: images[imageIndex].frameCount },
+          numCols: { value: 1 },
+          currentFrame: { value: currentFrame },
         },
-        vertexShader: vertShader,
-        fragmentShader: filmGrain
-      }
+        vertexShader: `
+          varying vec2 vUv;
+          void main()
+          {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }`,
+        fragmentShader: `
+          uniform sampler2D spriteSheetTexture;
+          uniform float numRows;
+          uniform float numCols;
+          uniform float currentFrame;
+
+          varying vec2 vUv;
+
+          void main() {
+            vec2 spriteSize = vec2(1.0 / numCols, 1.0 / numRows);
+            vec2 spriteOffset = vec2(
+              mod(currentFrame, numCols) / numCols,
+              floor(currentFrame / numCols) / numRows
+            );
+            vec2 uv = vUv * spriteSize + spriteOffset;
+            gl_FragColor = texture2D(spriteSheetTexture, uv);
+          }
+        `,
+      });
 
       var testMat = new THREE.ShaderMaterial();
       testMat.uniforms = filmGrain.uniforms;
